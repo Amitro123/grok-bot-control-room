@@ -1,17 +1,16 @@
-# Grok Bot Control Room
+# Control Center
 
-A 3D "mission control" dashboard for a company of AI agents. Every team gets a room on a small
-campus — see who is working on what, what is waiting for your approval, which scheduled tasks
-run next, how much of the weekly usage each team takes, and send commands back with one click.
-
-Adapted from [sarbarshem/grok-bot-3d-campus](https://github.com/sarbarshem/grok-bot-3d-campus)
-(MIT). Built with [Grok Bot](https://grok.com).
+3D control center for a team of AI agents.
 
 ![Control Room — 3D campus view](docs/screenshot.png)
 
 *Inside a team room:*
 
 ![Inside a team room](docs/screenshot-room.png)
+
+This public demo uses invented names and browser-only simulated actions.
+See [LIVE_STATUS.md](LIVE_STATUS.md) for the coordinator status protocol and
+[STATUS_PROTOCOL.md](STATUS_PROTOCOL.md) for private deployment notes.
 
 ## Features
 
@@ -24,6 +23,8 @@ Adapted from [sarbarshem/grok-bot-3d-campus](https://github.com/sarbarshem/grok-
   panel with live countdowns and failure alerts.
 - **Approvals tray**: approve, reject, or ask about any pending item; queue several and send
   together. In a real deployment they go to the main bot through a webhook.
+- **Live status**: coordinator-reported agent statuses with campus badges, team panel indicators,
+  and a live activity drawer. Demo mode shows fictional statuses for the seed roster.
 - **Live feed & HUD**: in-progress list, approvals window, usage %, next routines,
   "what changed since your last visit".
 - **Refresh**: reloads data and (in a live deployment) asks the bot to rebuild it
@@ -48,7 +49,7 @@ Next.js 16, React 19, three.js 0.187. No database — data lives in a private
 ```bash
 git clone https://github.com/Amitro123/grok-bot-control-room.git
 cd grok-bot-control-room/app
-npm ci
+npm install
 ```
 
 ### 2. Environment variables
@@ -62,10 +63,10 @@ cp ../.env.example .env.local
 | Variable | Purpose |
 |---|---|
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob read/write token (from your Blob store) |
-| `ADMIN_KEY` | Secret key for the bot data-push endpoint (`POST /api/admin/data`) |
+| `ADMIN_KEY` | Secret key for the bot data-push endpoint (`POST /api/admin/data` and `/api/admin/status`) |
 | `SESSION_SECRET` | Random string used to sign session cookies |
 | `CONTROL_ACCESS_TOKEN` | Long random token — your private access link is `/<this-token>` |
-| `WEBHOOK_URL` | *(optional)* The bot's webhook URL for page commands |
+| `WEBHOOK_URL` | *(optional)* The bot's webhook endpoint URL |
 | `WEBHOOK_KEY` | *(optional)* Sender key for the webhook |
 | `WEBHOOK_KEY_HEADER` | *(optional, default `Authorization`)* Header name for the key |
 | `NEXT_PUBLIC_TIMEZONE` | *(optional)* IANA timezone, e.g. `America/New_York` (default: viewer's TZ) |
@@ -78,9 +79,6 @@ npm run dev          # http://localhost:3000
 npm run build && npm start
 ```
 
-Open `http://localhost:3000/<CONTROL_ACCESS_TOKEN>` to set the session cookie, then
-navigate to `http://localhost:3000`.
-
 ### 4. Deploy to Vercel
 
 Push this repo to your GitHub, connect it to a Vercel project, add the env vars in the
@@ -89,8 +87,7 @@ Vercel dashboard, and deploy. The Blob store must be linked to the project.
 ### 5. Connect the webhook (optional)
 
 Visit `/setup` (after authenticating) to paste your bot's webhook URL and sender key.
-This connects the page's buttons to your bot. The webhook routine prompt templates are
-in [`docs/routine-prompts.md`](docs/routine-prompts.md) — adapt them to your own bots.
+The webhook routine prompt templates are in [`docs/routine-prompts.md`](docs/routine-prompts.md).
 
 ### 6. Push data
 
@@ -100,31 +97,26 @@ Use `app/push-data.sh` to upload fresh data without redeploying:
 CC_URL=https://your-app.vercel.app ADMIN_KEY=your-key ./push-data.sh data.json
 ```
 
-The data shape is documented in `app/components/ControlCenter.tsx` (the `DataShape` type
-and comments at the top).
-
 ## Project structure
 
 ```
 app/                   Next.js application
   app/                 App Router pages and API routes
-    [k]/route.ts       Private-link access gate
     api/admin/data/    Bot data-push endpoint
+    api/admin/status/  Live status push endpoint
     api/data/          Authenticated data read
+    api/status/        Authenticated status read
     api/send/          Page → bot webhook relay
     api/setup/         One-time webhook configuration
-    setup/             Webhook setup page
-  components/          ControlCenter (main UI), Campus3D (three.js scene)
-  lib/                 Auth, config, store, theme, timezone helpers
+  components/          ControlCenter, Campus3D, LiveStatus
+  lib/                 Auth, config, store, status, theme helpers
+  tools/               post-status helper, remove-attribution
   data.json            Seed/fallback data (fictional)
-  push-data.sh         Script to push data to the live app
-  make-bundle.sh       Bundle helper for Vercel connector deployments
 docs/                  Routine prompt templates and refresh procedure
-vercel.json            Vercel project config
+LIVE_STATUS.md         Live status feature overview
+STATUS_PROTOCOL.md     Coordinator status reporting protocol
 ```
 
 ## License
 
 MIT — see [LICENSE](app/LICENSE).
-
-Originally adapted from [sarbarshem/grok-bot-3d-campus](https://github.com/sarbarshem/grok-bot-3d-campus).

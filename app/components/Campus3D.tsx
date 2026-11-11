@@ -1,6 +1,7 @@
 "use client";
 // WebGL 3D workspace: the campus, every team room and its agents. Same props as the SVG engine (IsoCampus).
 import { TZ } from "../lib/tz";
+import { LiveBotStatus } from "./LiveStatus";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -616,6 +617,7 @@ export default function Campus3D(props: any) {
               style={{ position: "absolute", left: 0, top: 0, opacity: 0, display: "flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 6px", borderRadius: 999, background: P.card, border: `1px solid ${props.hot === tm.id ? P.accent : P.control}`, color: fz ? P.text3 : P.text, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer", pointerEvents: "auto", boxShadow: "0 4px 14px rgba(32,43,60,.12)", transition: "opacity 300ms", willChange: "transform" }}>
               <span style={{ width: 8, height: 8, borderRadius: 4, background: tone }} />
               {tm.name}
+              <span style={{ display: "flex", flexWrap: "wrap", maxWidth: 330, gap: 3 }}>{[tm.lead, ...tm.members].map((bot: { name: string }) => <LiveBotStatus key={bot.name} bot={bot.name} compact />)}</span>
               {open > 0 && <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: P.accent, color: "#fff", fontSize: 11, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>{open}</span>}
               {al.length > 0 && <span title={al.join(" · ")} style={{ fontSize: 12 }}>🚨</span>}
               {fr > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: P.accentText }}>✦ {fr} new</span>}
@@ -630,6 +632,7 @@ export default function Campus3D(props: any) {
             <div key={ft.id + k} ref={(e) => { labelEls.current["ag" + k] = e; }} onClick={() => props.onPick({ team: ft.id, what: "person", member: a.i })}
               style={{ position: "absolute", left: 0, top: 0, opacity: 0, pointerEvents: "auto", cursor: "pointer", textAlign: "center", padding: "2px 8px", borderRadius: 10, background: "rgba(255,255,255,.94)", border: `1px solid ${P.control}`, maxWidth: 150, transition: "opacity 250ms" }}>
               <div style={{ fontSize: 11.5, fontWeight: 700, color: P.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.lead ? "👑 " : ""}{a.name}</div>
+              <LiveBotStatus bot={a.name} compact />
               {a.state === "type" && a.task && <div style={{ fontSize: 10.5, color: P.accentText, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>⌨ {a.task}</div>}
               {a.state === "sleep" && <div style={{ fontSize: 10.5, color: P.text3 }}>Asleep</div>}
             </div>

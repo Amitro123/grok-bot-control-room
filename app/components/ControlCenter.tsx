@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { useGrokTheme, readableTeamText } from "../lib/theme";
 import { TZ } from "../lib/tz";
 import Campus3D from "./Campus3DLazy";
+import { LiveStatusProvider, LiveBotStatus, LiveActivity } from "./LiveStatus";
 
 // ===== DATA (a refresh routine edits only these constants) =====
 // UPDATED: string shown in the HUD.
@@ -339,6 +340,7 @@ function QuickCmds(props: { team: Team; owner: Member; isLead: boolean; onSend: 
   const mine = (team.routines || []).filter((r) => r.owner === owner.name && r.state === "on");
   return (
     <div style={{ background: th.fill.accentSubtle, borderRadius: 16, padding: "10px 12px", marginTop: 12 }}>
+      <LiveBotStatus bot={owner.name} />
       <MessageComposer key={`${team.id}:${owner.name}`} bot={owner.name} team={team.name} />
       <div style={{ fontSize: 13, fontWeight: 700, color: readableTeamText(th.text.secondary), marginTop: 14, marginBottom: 8 }}>Other quick commands · go into the bot tray</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
@@ -358,7 +360,7 @@ function QuickCmds(props: { team: Team; owner: Member; isLead: boolean; onSend: 
 
 // ---------- character ----------
 function Dude(props: { x: number; y: number; t: number; seed: number; color: string; label: string; s?: number; lead?: boolean; asleep?: boolean; typing?: boolean; walking?: boolean; alert?: boolean }) {
-  // flat "blob with two dots for eyes" character (Grok Bot style)
+  // flat "blob with two dots for eyes" character 
   const th = useGrokTheme();
   const { t, seed } = props;
   const s = (props.s || 1) * (props.lead ? 1.2 : 1);
@@ -2180,6 +2182,7 @@ function RoomPanel(props: { team: Team; idx: number; t: number; tab: PanelTab; m
             <span style={{ flex: 1, minWidth: 0 }}>
               <b style={{ fontSize: 14 }}>{m.name}</b>{j === 0 && <span style={{ fontSize: 11, color: readableTeamText(th.text.warning) }}> · team lead</span>}
               <span style={{ display: "block", fontSize: 12, color: readableTeamText(th.text.tertiary) }}>{m.role}</span>
+              <LiveBotStatus bot={m.name} />
               <span style={{ display: "block", fontSize: 12, color: readableTeamText(dn.length ? th.text.accent : th.text.tertiary), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{fz ? "Asleep 💤" : dn.length ? `⌨ ${dn[0].text}` : "Free"}</span>
             </span>
             {rts.length > 0 && <span style={{ fontSize: 11.5, color: readableTeamText(th.text.secondary), whiteSpace: "nowrap" }}>⏰ {rts.length}</span>}
@@ -3156,6 +3159,7 @@ function ControlCenterInner() {
 
       {/* HUD */}
       <div style={{ position: "absolute", top: 12, insetInlineStart: "50%", transform: "translateX(-50%)", zIndex: 6, ...pill, gap: phone ? 12 : 16, padding: phone ? "5px 12px" : "6px 14px", maxWidth: "calc(100vw - 20px)", boxSizing: "border-box" }}>
+        <LiveActivity />
         <button onClick={() => { setInboxOpen(!inboxOpen); setFeedOpen(false); setDrawer(null); }} title="waiting for your approval" style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit", color: readableTeamText(th.text.accent) }}>
           <svg width={22} height={22} viewBox="0 0 20 20" style={{ transform: `scale(${(1 + 0.08 * Math.sin(t * 4)) * bumpS})` }}><path d="M2 11 l3 -7 h10 l3 7 v6 h-16 z" fill="none" stroke={th.text.accent} strokeWidth={1.8} strokeLinejoin="round" /><path d="M2 11 h5 l1 2 h4 l1 -2 h5" fill="none" stroke={th.text.accent} strokeWidth={1.8} /></svg>
           <b style={{ fontSize: 17, display: "inline-block", transform: `scale(${bumpS})` }}>{openTotal}</b>
@@ -3531,7 +3535,7 @@ export default function ControlCenter(props: { initial: DataShape; demo?: DemoAp
   RF = { busy, at, result, reqAt, polling: pollUntil > 0, refresh, note };
   DEMO = demo;
   if (!mounted) return <div style={{ height: "100dvh", background: "#f4f5f7" }} />;
-  return <ControlCenterInner />;
+  return <LiveStatusProvider demo={!!demo} demoNames={data.TEAMS.flatMap(team => [team.lead, ...team.members].map(bot => bot.name))}><ControlCenterInner /></LiveStatusProvider>;
 }
 
 // shared with the WebGL scene

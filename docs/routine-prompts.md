@@ -43,7 +43,7 @@ B) otherwise text starts "N request(s) from the control center:" followed by num
    - Otherwise remove only a stale timer named in that state file, create one dated one-off routine for that time (name "Control center one-off refresh", schedule M H D MON *, and check the tool labels it Once), and save its routine id and that ISO time in flush_timer (id on the first line, T on the second).
    Creating a dated one-off routine does not normally raise a confirmation card; if one appears, approve it. The next full refresh picks up the change.
 
-Results go to: the team leads named in each line, in Grok Bot (1:1 messages, one per lead). Then the user, in the private
+Results go to: the team leads named in each line (1:1 messages, one per lead). Then the user, in the private
 chat, gets ONE short line saying what went to whom, plus the confirm-first message when there is one.
 A refresh (case A) sends the user nothing. When there is nothing to do, send nothing.
 
