@@ -1,0 +1,97 @@
+{
+  "UPDATED": "11.11 06:00",
+  "USAGE": {
+    "weeklyPct": 32,
+    "reset": "Mon 00:00",
+    "onDemandPct": 0,
+    "period": "Nov 4 – 10",
+    "byTeam": [
+      { "label": "Engineering", "pct": 18 },
+      { "label": "Research", "pct": 9 },
+      { "label": "Ops", "pct": 5 }
+    ],
+    "topBots": [
+      { "label": "AlphaBot", "pct": 14 },
+      { "label": "BetaBot", "pct": 10 },
+      { "label": "GammaBot", "pct": 8 }
+    ]
+  },
+  "TEAMS": [
+    {
+      "id": "eng",
+      "name": "Engineering",
+      "status": "active",
+      "lead": { "name": "AlphaBot", "role": "Team lead – coordinates engineering tasks" },
+      "members": [
+        { "name": "BetaBot", "role": "Backend developer" },
+        { "name": "GammaBot", "role": "Frontend developer" }
+      ],
+      "work": "Building the API v2 endpoints",
+      "next": "Integration tests for the new auth flow",
+      "lines": ["API v2 is 80% done", "Auth flow needs review", "Tests passing"],
+      "pending": [
+        { "id": "p1", "what": "Deploy API v2 to staging?", "since": "10.11 14:00" }
+      ],
+      "usage": "18%",
+      "goal": { "label": "Ship API v2", "current": 4, "target": 5, "due": "Nov 15" },
+      "activity": [
+        { "time": "11.11 05:30", "text": "BetaBot finished the rate-limiting middleware" },
+        { "time": "10.11 22:10", "text": "GammaBot updated the dashboard components" }
+      ],
+      "tasks": [
+        { "text": "Rate-limiting middleware", "state": "done", "owner": "BetaBot" },
+        { "text": "Auth flow integration", "state": "doing", "owner": "AlphaBot" },
+        { "text": "Write API docs", "state": "todo", "owner": "GammaBot" },
+        { "text": "Load testing", "state": "todo" }
+      ],
+      "routines": [
+        {
+          "id": "r1",
+          "owner": "AlphaBot",
+          "name": "Daily standup summary",
+          "schedule": "Every day at 09:00",
+          "state": "on",
+          "lastRun": "11.11 09:00",
+          "lastResult": "ok",
+          "perWeek": 7
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "name": "Research",
+      "status": "active",
+      "lead": { "name": "DeltaBot", "role": "Research lead – literature reviews and experiments" },
+      "members": [
+        { "name": "EpsilonBot", "role": "Data analyst" }
+      ],
+      "work": "Benchmarking new embedding models",
+      "lines": ["Testing three candidate models", "Results due Friday"],
+      "pending": [],
+      "goal": { "label": "Benchmark report", "current": 2, "target": 3 },
+      "activity": [
+        { "time": "10.11 18:00", "text": "EpsilonBot ran the first batch of evaluations" }
+      ],
+      "tasks": [
+        { "text": "Run embedding benchmarks", "state": "doing", "owner": "EpsilonBot" },
+        { "text": "Write comparison report", "state": "todo", "owner": "DeltaBot" }
+      ]
+    },
+    {
+      "id": "ops",
+      "name": "Ops",
+      "status": "hold",
+      "lead": { "name": "ZetaBot", "role": "Operations lead – monitoring and deployments" },
+      "members": [],
+      "work": "Waiting for staging environment approval",
+      "lines": ["Blocked on infra ticket"],
+      "pending": [
+        { "id": "p2", "what": "Approve staging environment provisioning", "since": "9.11 10:00" }
+      ],
+      "activity": [],
+      "tasks": [
+        { "text": "Provision staging env", "state": "todo", "owner": "ZetaBot" }
+      ]
+    }
+  ]
+}

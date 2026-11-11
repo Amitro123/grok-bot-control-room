@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.vercel/
+app/deploy/
+# Real data files should not be committed; app/data.json is fictional seed data
