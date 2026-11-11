@@ -9,6 +9,10 @@ Adapted from [sarbarshem/grok-bot-3d-campus](https://github.com/sarbarshem/grok-
 
 ![Control Room — 3D campus view](docs/screenshot.png)
 
+*Inside a team room:*
+
+![Inside a team room](docs/screenshot-room.png)
+
 ## Features
 
 - **3D campus** (three.js): one room per team, 6 around a central plaza and frozen teams in a
