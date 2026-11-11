@@ -7,6 +7,8 @@ run next, how much of the weekly usage each team takes, and send commands back w
 Adapted from [sarbarshem/grok-bot-3d-campus](https://github.com/sarbarshem/grok-bot-3d-campus)
 (MIT). Built with [Grok Bot](https://grok.com).
 
+![Control Room — 3D campus view](docs/screenshot.png)
+
 ## Features
 
 - **3D campus** (three.js): one room per team, 6 around a central plaza and frozen teams in a
