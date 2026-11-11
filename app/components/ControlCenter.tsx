@@ -316,6 +316,20 @@ function MessageComposer(props: { bot: string; team: string }) {
   );
 }
 
+// Full task titles stay readable; native details adds keyboard/touch interaction without dispatching anything.
+function TaskCard({ team, task, fresh, onSend }: { team: Team; task: Task; fresh?: boolean; onSend: (text: string) => void }) {
+  const th = useGrokTheme();
+  const color = task.state === "todo" ? th.text.warning : task.state === "doing" ? th.text.accent : th.text.success;
+  return <details title={task.text} data-task-title={task.text} style={{ minWidth: 0, marginBottom: 7, padding: "8px 10px", borderRadius: 10, background: th.bg.elevated, color: th.text.primary, border: `1px solid ${fresh ? th.fill.accent : th.border.default}`, borderInlineStart: `3px solid ${color}` }}>
+    <summary aria-label={`Task details: ${task.text}`} dir="auto" style={{ cursor: "pointer", fontSize: 13.5, lineHeight: "20px", whiteSpace: "normal", overflowWrap: "anywhere", textDecoration: task.state === "done" ? "line-through" : "none" }}>{task.text}</summary>
+    <div style={{ marginTop: 7, fontSize: 12, lineHeight: "19px", color: th.text.secondary }}>
+      <div>State: <b style={{ color }}>{STATE_LABEL[task.state]}</b></div>
+      <div dir="auto">Owner: {task.owner || team.lead.name}</div>
+      {task.state !== "done" && <button type="button" onClick={() => onSend(`What's the status? — ${team.name}: ${task.text}`)} style={{ marginTop: 5, font: "inherit", padding: "3px 9px", borderRadius: 999, border: "none", background: th.fill.secondary, color: th.text.primary, cursor: "pointer" }}>Status?</button>}
+    </div>
+  </details>;
+}
+
 // quick commands for one bot (lead or worker)
 function QuickCmds(props: { team: Team; owner: Member; isLead: boolean; onSend: (msg: string) => void }) {
   const th = useGrokTheme();
@@ -1665,7 +1679,7 @@ function FloatApproveRow(props: { row: ApproveRowT; t: number; last: boolean; de
 // The canvas draws it with a light SVG 3D engine (IsoCampus). The web app swaps in a WebGL scene (SCENE3D)
 // and falls back to IsoCampus when WebGL is missing.
 const SCENE3D: any = Campus3D;
-type ScenePick = { team: string; what?: RoomPop["kind"]; member?: number };
+type ScenePick = { team: string; what?: RoomPop["kind"]; member?: number; task?: number };
 type SceneCmd = { n: number; kind: "in" | "out" | "home" | "left" | "right" | "tilt" };
 type SceneView = { x: number; z: number; yaw: number };
 type SceneProps = {
@@ -1952,11 +1966,11 @@ function IsoCampus(props: SceneProps) {
       const notes: any[] = [];
       const st = (["todo", "doing", "done"] as const);
       st.forEach((s, col) => {
-        const list = tm.tasks.filter((k) => k.state === s).slice(0, 4);
-        list.forEach((_, j) => {
+        const list = tm.tasks.map((task, taskIndex) => ({ task, taskIndex })).filter(({ task }) => task.state === s).slice(0, 4);
+        list.forEach(({ task, taskIndex }, j) => {
           const nx0 = bx - bw / 2 + 0.06 + col * (bw - 0.12) / 3, ny = 0.9 - j * 0.11;
           const q = [P(nx0 + 0.02, ny - 0.08, bz + 0.005), P(nx0 + (bw - 0.12) / 3 - 0.03, ny - 0.08, bz + 0.005), P(nx0 + (bw - 0.12) / 3 - 0.03, ny, bz + 0.005), P(nx0 + 0.02, ny, bz + 0.005)];
-          notes.push(<polygon key={s + j} points={pts(q)} fill={s === "todo" ? th.text.warning : s === "doing" ? th.fill.accent : th.text.success} opacity={s === "done" ? 0.55 : 0.9} />);
+          notes.push(<polygon key={s + j} {...evFor({ team: tm.id, what: "task", task: taskIndex })} points={pts(q)} fill={s === "todo" ? th.text.warning : s === "doing" ? th.fill.accent : th.text.success} opacity={s === "done" ? 0.55 : 0.9}><title>{task.text}</title></polygon>);
         });
       });
       dr.push({ d: P(bx, 0.7, bz)[2] + 0.001, l: 2, el: <g key={"bd" + tm.id} opacity={op} {...evFor({ team: tm.id, what: "task" })}><polygon points={pts(bq)} fill={th.bg.base} stroke={th.border.strong} strokeWidth={2} />{notes}</g> });
@@ -2148,13 +2162,7 @@ function RoomPanel(props: { team: Team; idx: number; t: number; tab: PanelTab; m
       return (
         <div key={st}>
           <div style={{ ...sec, color: readableTeamText(st === "todo" ? th.text.warning : st === "doing" ? th.text.accent : th.text.success) }}>{STATE_LABEL[st]} · {list.length}</div>
-          {list.map((k, i) => (
-            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "8px 10px", marginBottom: 6, borderRadius: 14, background: th.bg.base, border: `1px solid ${props.fresh["k:" + team.id + ":" + k.text.slice(0, 40) + ":" + k.state] ? th.fill.accent : th.border.subtle}` }}>
-              <span style={{ width: 8, height: 8, borderRadius: 4, marginTop: 6, flex: "none", background: st === "todo" ? th.text.warning : st === "doing" ? th.fill.accent : th.text.success, opacity: st === "doing" ? 0.6 + 0.4 * Math.sin(t * 3 + i) : 1 }} />
-              <span style={{ flex: 1, fontSize: 13.5, lineHeight: "19px", textDecoration: st === "done" ? "line-through" : "none", opacity: st === "done" ? 0.6 : 1 }}>{k.text}<span style={{ display: "block", fontSize: 11.5, color: readableTeamText(th.text.tertiary) }}>{k.owner || team.lead.name}</span></span>
-              {st !== "done" && <button onClick={() => props.onSend(`What's the status? — ${team.name}: ${k.text}`)} title="Ask about the task" style={{ font: "inherit", fontSize: 11.5, padding: "3px 9px", borderRadius: 999, border: "none", background: th.fill.secondary, color: readableTeamText(th.text.primary), cursor: "pointer", whiteSpace: "nowrap" }}>Status?</button>}
-            </div>
-          ))}
+          {list.map((k, i) => <TaskCard key={k.text + ":" + (k.owner || "") + ":" + i} team={team} task={k} fresh={!!props.fresh["k:" + team.id + ":" + k.text.slice(0, 40) + ":" + k.state]} onSend={props.onSend} />)}
         </div>
       );
     });
@@ -2228,10 +2236,17 @@ function RoomPanel(props: { team: Team; idx: number; t: number; tab: PanelTab; m
 }
 
 // tooltip card for hovering a room or an agent in the 3D scene
-function SceneTip(props: { team: Team; member?: number; what?: RoomPop["kind"]; alerts: string[]; open: number }) {
+function SceneTip(props: { team: Team; task?: number; member?: number; what?: RoomPop["kind"]; alerts: string[]; open: number }) {
   const th = useGrokTheme();
   const { team } = props;
   const card: any = { background: th.bg.elevated, border: `1px solid ${th.border.strong}`, borderRadius: 16, padding: "10px 12px", boxShadow: "0 10px 30px rgba(32,43,60,0.147)", color: readableTeamText(th.text.primary), fontFamily: th.font.family };
+  if (props.what === "task") {
+    const selected = props.task === undefined ? null : team.tasks[props.task];
+    return <div style={card}><b>{team.name} · {selected ? "Task details" : "Task board"}</b>
+      {(selected ? [selected] : team.tasks.slice(0, 6)).map((task, i) => <div key={i} dir="auto" style={{ marginTop: 7, fontSize: 13, lineHeight: "19px", overflowWrap: "anywhere", whiteSpace: "normal" }}><b>{task.text}</b><div style={{ fontSize: 11.5, color: th.text.secondary }}>{STATE_LABEL[task.state]} · {task.owner || team.lead.name}</div></div>)}
+      <div style={{ marginTop: 8, fontSize: 12, color: th.text.accent }}>Click to open Tasks · full titles and details →</div>
+    </div>;
+  }
   if (props.what === "person" && props.member !== undefined) {
     const m = props.member < 0 ? team.lead : team.members[props.member];
     if (!m) return null;
@@ -2245,7 +2260,7 @@ function SceneTip(props: { team: Team; member?: number; what?: RoomPop["kind"]; 
       </div>
     );
   }
-  const label = props.what === "task" ? "Task board" : props.what === "news" ? "Activity screen" : props.what === "goal" ? "Goal shelf" : props.what === "inbox" ? "Approvals pile" : null;
+  const label = props.what === "news" ? "Activity screen" : props.what === "goal" ? "Goal shelf" : props.what === "inbox" ? "Approvals pile" : null;
   return (
     <div dir="ltr" style={card}>
       <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}><b style={{ fontSize: 15 }}>{team.name}</b><span style={{ fontSize: 11.5, color: readableTeamText(th.text.tertiary) }}>{STATUS_LABEL[team.status]}{label ? ` · ${label}` : ""}</span></div>
@@ -2358,15 +2373,7 @@ function Room3D(props: { team: Team; idx: number; t: number; vp: { w: number; h:
           return (
             <div key={st} style={{ background: th.bg.base, borderRadius: 12, padding: 8, borderTop: `3px solid ${colC[st]}` }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: readableTeamText(colC[st]), marginBottom: 6 }}>{STATE_LABEL[st]} · {list.length}</div>
-              {list.map((x, i) => (
-                <div key={i} style={{ background: hexMix(colC[st], 0.16, th.bg.elevated), border: `1px solid ${props.fresh["k:" + team.id + ":" + x.text.slice(0, 40) + ":" + x.state] ? th.fill.accent : hexMix(colC[st], 0.35, th.bg.elevated)}`, borderRadius: 10, padding: "6px 9px", marginBottom: 6 }}>
-                  <div style={{ fontSize: 13.5, lineHeight: "19px", textDecoration: st === "done" ? "line-through" : "none", opacity: st === "done" ? 0.72 : 1 }}>{x.text}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-                    <span style={{ fontSize: 12, color: readableTeamText(th.text.tertiary) }}>{x.owner || team.lead.name}</span>
-                    {st !== "done" && <button onClick={() => props.onSend(`What's the status? — ${team.name}: ${x.text}`)} style={{ marginInlineStart: "auto", font: "inherit", fontSize: 11.5, padding: "1px 9px", borderRadius: 999, border: "none", background: th.fill.secondary, color: readableTeamText(th.text.primary), cursor: "pointer" }}>Status?</button>}
-                  </div>
-                </div>
-              ))}
+              {list.map((x, i) => <TaskCard key={x.text + ":" + (x.owner || "") + ":" + i} team={team} task={x} fresh={!!props.fresh["k:" + team.id + ":" + x.text.slice(0, 40) + ":" + x.state]} onSend={props.onSend} />)}
               {!list.length && <div style={{ fontSize: 12.5, color: readableTeamText(th.text.tertiary) }}>—</div>}
             </div>
           );
@@ -2521,7 +2528,7 @@ function Room3D(props: { team: Team; idx: number; t: number; vp: { w: number; h:
     </div>
   );
   const kb = (
-    <div onClick={go(1)} {...hover("kb")} title="Task board" style={{ position: "absolute", left: L.board.x, top: L.board.y, width: L.board.w, height: L.board.h, transform: "translateZ(10px)", background: "#ffffff", border: "5px solid #c8cdd4", borderRadius: 10, boxSizing: "border-box", padding: "8px 6px", display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 4, cursor: "pointer", boxShadow: glowIf("kb", tc) }}>
+    <div onClick={go(1)} {...hover("kb")} title="Task board — click to open full task details" data-task-board="wall" style={{ position: "absolute", left: L.board.x, top: L.board.y, width: L.board.w, height: L.board.h, transform: "translateZ(10px)", background: "#ffffff", border: "5px solid #c8cdd4", borderRadius: 10, boxSizing: "border-box", padding: "8px 6px", display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 4, cursor: "pointer", boxShadow: glowIf("kb", tc) }}>
       {(["todo", "doing", "done"] as const).map((st) => {
         const list = team.tasks.filter((x) => x.state === st);
         const max = portrait ? 3 : 6;
@@ -2529,7 +2536,7 @@ function Room3D(props: { team: Team; idx: number; t: number; vp: { w: number; h:
           <div key={st} style={{ minWidth: 0, borderInlineStart: st === "todo" ? "none" : "2px dashed #d0d6df", paddingInline: 4 }}>
             <div style={{ textAlign: "center", fontSize: 16, fontWeight: 800, color: readableTeamText(colC[st]), marginBottom: 6 }}>{STATE_LABEL[st]} · {list.length}</div>
             {list.slice(0, max).map((x, i) => (
-              <div key={i} style={{ background: hexMix(colC[st], 0.22, "#ffffff"), border: `1px solid ${hexMix(colC[st], 0.45, "#ffffff")}`, borderRadius: 4, padding: "5px 6px", marginBottom: 6, fontSize: 14, lineHeight: "17px", color: readableTeamText(th.text.primary), transform: `rotate(${((i * 37 + st.length) % 5 - 2) * 0.7}deg)`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: st === "done" ? "line-through" : "none", opacity: st === "done" ? 0.7 : 1 }}>{x.text}</div>
+              <button key={x.text + ":" + i} type="button" title={x.text} aria-label={`Open Tasks: ${x.text}`} dir="auto" onClick={(e) => { e.stopPropagation(); go(1)(); }} style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, width: "100%", textAlign: "start", fontFamily: "inherit", background: hexMix(colC[st], 0.16, "#ffffff"), border: `1px solid ${hexMix(colC[st], 0.45, "#ffffff")}`, borderRadius: 4, padding: "5px 6px", marginBottom: 6, fontSize: 14, lineHeight: "18px", color: th.text.primary, transform: `rotate(${((i * 37 + st.length) % 5 - 2) * 0.7}deg)`, whiteSpace: "normal", overflowWrap: "anywhere", overflow: "hidden", cursor: "pointer", textDecoration: st === "done" ? "line-through" : "none" }}>{x.text}</button>
             ))}
             {list.length > max && <div style={{ textAlign: "center", fontSize: 13, color: readableTeamText(th.text.tertiary) }}>+{list.length - max}</div>}
           </div>
@@ -3073,7 +3080,7 @@ function ControlCenterInner() {
   const left = 100 - USAGE.weeklyPct;
   const toastVisible = toast && t - toast.t0 < (toast.kind === "failed" ? 14 : 7);
   const Scene: any = SCENE3D && !glFail ? SCENE3D : IsoCampus;
-  const sceneTip = (p: ScenePick) => { const tm = TEAMS.find((x) => x.id === p.team); return tm ? <SceneTip team={tm} member={p.member} what={p.what} alerts={alertsOf[tm.id] || []} open={openOf[tm.id] || 0} /> : null; };
+  const sceneTip = (p: ScenePick) => { const tm = TEAMS.find((x) => x.id === p.team); return tm ? <SceneTip team={tm} task={p.task} member={p.member} what={p.what} alerts={alertsOf[tm.id] || []} open={openOf[tm.id] || 0} /> : null; };
   const clockLines = (soon.length ? soon : upcoming).slice(0, 3).map((x) => `${shortWhen(x.at as number, now)} · ${x.team.name} · ${x.r.owner}`);
   const fresh3 = freshList.length;
   const glass: any = { background: `color-mix(in srgb, ${th.bg.elevated} 92%, transparent)`, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: `1px solid ${th.border.default}`, boxShadow: "0 8px 28px rgba(32,43,60,0.118)" };
@@ -3180,7 +3187,7 @@ function ControlCenterInner() {
           const res = rf && !busyNow && rf.at && Date.now() - rf.at < (rf.result === "new" ? 8000 : 4000) ? rf.result : "";
           const coolMs = rf && rf.reqAt ? 5 * 60000 - (Date.now() - rf.reqAt) : 0;
           const mmss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
-          const lbl = busyNow ? "Refreshing…" : rf && rf.note ? rf.note : res === "new" ? "✓ New data loaded" : coolMs > 0 ? `Refresh request sent${rf && rf.polling ? " · waiting for data" : ""} · again in ${mmss(coolMs)}` : res === "same" ? "✓ No new data" : res === "error" ? "Loading failed" : lastAt ? `Updated ${ilTime(lastAt)}` : "Refresh";
+          const lbl = busyNow ? "Refreshing…" : rf && rf.note ? rf.note : res === "new" ? "✓ New data loaded" : coolMs > 0 ? `Refresh request sent${rf && rf.polling ? " · waiting for data" : ""} · again in ${mmss(coolMs)}` : res === "same" ? "✓ No new data" : res === "error" ? "Loading failed" : lastAt ? `Checked ${ilTime(lastAt)}` : "Refresh";
           const tip = rf ? "Refresh: reloads the saved data right away and asks the bot to update it from the team chats (at most once every 5 minutes)" : `Refresh: reloads the view (${UPDATED})`;
           return (
             <button onClick={() => (rf ? rf.refresh() : setRfLocal(Date.now()))} title={tip} aria-label="Refresh data" style={{ display: "flex", alignItems: "center", gap: 5, background: spin ? th.fill.secondary : "none", border: "none", borderRadius: 999, padding: spin ? "2px 8px" : 0, cursor: "pointer", font: "inherit", fontSize: 12, color: readableTeamText(spin ? th.text.primary : th.text.tertiary), whiteSpace: "nowrap" }}>

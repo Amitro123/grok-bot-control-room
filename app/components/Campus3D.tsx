@@ -5,10 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { PALETTE } from "../lib/theme";
+import { campusDataSignature, drawTaskBoard, taskAtUv, type TaskRegion } from "../lib/task-board";
 import { roomGeo, agentsOf, W3, ctrlFor, qpt, PLAZA, TREES, campusGrow } from "./ControlCenter";
 
 const P = PALETTE;
-type Pick = { team: string; what?: string; member?: number };
+type Pick = { team: string; what?: string; member?: number; task?: number };
 const ease = (k: number) => (k < 0 ? 0 : k > 1 ? 1 : k * k * (3 - 2 * k));
 const STATE_COL: Record<string, string> = { todo: P.warning, doing: P.accent, done: P.success };
 
@@ -37,7 +38,7 @@ export default function Campus3D(props: any) {
 
   // data signature: rebuild rooms only when something visible in 3D changes
   const teams: any[] = props.teams;
-  const sig = JSON.stringify(teams.map((t) => [t.id, t.status, t.members.length, t.tasks.map((k: any) => k.state + (k.owner || "")).join(","), (props.openOf || {})[t.id] || 0, t.activity.length ? t.activity[0].text : "", t.goal ? t.goal.current : null]));
+  const sig = campusDataSignature(teams, props.openOf || {});
 
   useEffect(() => {
     const el = host.current; if (!el) return;
@@ -250,18 +251,11 @@ export default function Campus3D(props: any) {
         const onWall: THREE.Object3D[] = [];
         if (!fz) {
           const bw = g.board.w, bh = 0.56;
-          const btex = canvasTex(512, Math.round((512 * bh) / bw), (c) => {
-            const W = c.canvas.width, Hh = c.canvas.height;
-            c.fillStyle = "#ffffff"; c.fillRect(0, 0, W, Hh); c.strokeStyle = P.selected; c.lineWidth = 10; c.strokeRect(0, 0, W, Hh);
-            (["todo", "doing", "done"] as const).forEach((st, col) => {
-              const cw = (W - 30) / 3, x0 = W - 15 - (col + 1) * cw;
-              const list = tm.tasks.filter((k: any) => k.state === st);
-              c.fillStyle = STATE_COL[st]; c.font = `bold ${Math.round(Hh * 0.12)}px ${P.font}`; c.textAlign = "center"; c.direction = "ltr";
-              c.fillText(`${st === "todo" ? "To do" : st === "doing" ? "In progress" : "Done"} · ${list.length}`, x0 + cw / 2, Hh * 0.2);
-              list.slice(0, 6).forEach((_: any, j: number) => { const r = Math.floor(j / 2), q = j % 2; c.globalAlpha = st === "done" ? 0.55 : 0.95; c.fillStyle = STATE_COL[st]; rr(c, x0 + 8 + q * (cw / 2 - 4), Hh * 0.28 + r * Hh * 0.22, cw / 2 - 14, Hh * 0.17, 6); c.fill(); c.globalAlpha = 1; });
-            });
-          });
+          let taskRegions: TaskRegion[] = [];
+          const texWidth = 1024, texHeight = Math.round((texWidth * bh) / bw);
+          const btex = canvasTex(texWidth, texHeight, (c) => { taskRegions = drawTaskBoard(c, tm.tasks); });
           const board = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), own(new THREE.MeshBasicMaterial({ map: btex })));
+          board.userData.taskRegions = taskRegions; board.userData.boardSize = { width: texWidth, height: texHeight };
           board.position.set(g.board.x, 0.72, -g.d / 2 + WT + 0.006); pick(board, "task"); G.add(board); onWall.push(board);
           const tvw = g.tv.w, tvh = tvw * 0.56;
           const tvCv = document.createElement("canvas"); tvCv.width = 512; tvCv.height = 288;
@@ -433,7 +427,10 @@ export default function Campus3D(props: any) {
       const r = renderer.domElement.getBoundingClientRect(); ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
       const hit = ray.intersectObjects(pickables, false).find((h) => h.object.visible);
-      return hit ? hit.object.userData.pick : null;
+      if (!hit) return null;
+      const data = hit.object.userData;
+      if (data.taskRegions && hit.uv) return { ...data.pick, task: taskAtUv(data.taskRegions, hit.uv.x, hit.uv.y, data.boardSize.width, data.boardSize.height) };
+      return data.pick;
     };
     let down: null | { x: number; y: number; t: number } = null;
     let lastHover = "";
